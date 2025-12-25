@@ -477,7 +477,31 @@ def get_rank_history(date: str, news_id: int, limit: Optional[str] = None) -> Di
 @app.get("/api/admin/config")
 def admin_get_config(request: Request) -> Any:
     _require_admin(request)
-    return JSONResponse({"path": str(PATHS.config_path), "content": _read_text_file(PATHS.config_path)})
+    config_path = PATHS.config_path
+    if config_path.exists():
+        return JSONResponse(
+            {
+                "path": str(config_path),
+                "content": _read_text_file(config_path),
+                "exists": True,
+                "source": "file",
+            }
+        )
+
+    default_text = CONFIG_STORE.read_default_config_text()
+    if default_text is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"config.yaml not found at {config_path} and no default template is available",
+        )
+    return JSONResponse(
+        {
+            "path": str(config_path),
+            "content": default_text,
+            "exists": False,
+            "source": "default",
+        }
+    )
 
 
 @app.put("/api/admin/config")

@@ -57,7 +57,7 @@
       </div>
     </div>
 
-    <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
       <div class="card rounded-2xl p-4">
         <div class="flex items-center justify-between">
           <div>
@@ -386,21 +386,6 @@
       <div class="card rounded-2xl p-4">
         <div class="flex items-center justify-between">
           <div>
-            <div class="font-medium">Advanced: config.yaml</div>
-            <div class="muted text-xs mt-1">完整 YAML，可直接编辑保存（会自动备份）。</div>
-          </div>
-          <div class="flex gap-2">
-            <button id="loadConfig" class="btn rounded-lg px-3 py-2 text-sm">Load</button>
-            <button id="saveConfig" class="btn rounded-lg px-3 py-2 text-sm">Save</button>
-          </div>
-        </div>
-        <textarea id="config" class="input w-full rounded-xl p-3 mt-3 h-[55vh] font-mono text-xs"></textarea>
-        <div id="configMsg" class="muted text-xs mt-2"></div>
-      </div>
-
-      <div class="card rounded-2xl p-4">
-        <div class="flex items-center justify-between">
-          <div>
             <div class="font-medium">frequency_words.txt</div>
             <div class="muted text-xs mt-1">关键词/词组配置（支持 + ! @；支持用 [标题] 作为分组名）。</div>
           </div>
@@ -410,7 +395,7 @@
             <button id="resetWords" class="btn rounded-lg px-3 py-2 text-sm">Reset</button>
           </div>
         </div>
-        <textarea id="words" class="input w-full rounded-xl p-3 mt-3 h-[45vh] font-mono text-xs"></textarea>
+        <textarea id="words" class="input w-full rounded-xl p-3 mt-3 h-[55vh] font-mono text-xs"></textarea>
         <div id="wordsMsg" class="muted text-xs mt-2"></div>
 
         <div class="mt-4 border-t border-white/10 pt-4 flex items-center justify-between">
@@ -422,6 +407,21 @@
         </div>
         <div id="crawlMsg" class="muted text-xs mt-2"></div>
       </div>
+    </div>
+
+    <div class="mt-5 card rounded-2xl p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="font-medium">Advanced: config.yaml</div>
+          <div class="muted text-xs mt-1">完整 YAML，可直接编辑保存（会自动备份）。</div>
+        </div>
+        <div class="flex gap-2">
+          <button id="loadConfig" class="btn rounded-lg px-3 py-2 text-sm">Load</button>
+          <button id="saveConfig" class="btn rounded-lg px-3 py-2 text-sm">Save</button>
+        </div>
+      </div>
+      <textarea id="config" class="input w-full rounded-xl p-3 mt-3 h-[60vh] font-mono text-xs"></textarea>
+      <div id="configMsg" class="muted text-xs mt-2"></div>
     </div>
   </section>
 
@@ -746,9 +746,18 @@
       try {
         const data = await api('/api/admin/config', { method: 'GET' });
         elConfig.value = data.content || '';
-        configMsg.textContent = 'Loaded: ' + (data.path || '');
+        if (data && data.source === 'default') {
+          configMsg.textContent = `Loaded default template (config.yaml missing). Target path: ${data.path || ''}`;
+        } else {
+          configMsg.textContent = 'Loaded: ' + (data.path || '');
+        }
       } catch (e) {
-        configMsg.textContent = String(e);
+        const msg = String(e);
+        if (msg.startsWith('Error: 401')) {
+          configMsg.textContent = msg + ' (set Admin Token above, click Save Token, then retry)';
+        } else {
+          configMsg.textContent = msg;
+        }
       }
     });
 

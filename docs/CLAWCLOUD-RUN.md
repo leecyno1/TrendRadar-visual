@@ -19,7 +19,16 @@
 
 > 如果你的 ClawCloud Run 不支持从 Git 构建，请跳到下一节 “先构建并推送镜像”。
 
-## 2) 先构建并推送镜像（兼容方案）
+## 2) 直接使用 GHCR 镜像（无需 Claw 构建）
+
+如果你更希望 Claw 直接拉取公开镜像，本项目已提供 GHCR 构建工作流（见 `.github/workflows/ghcr.yml`）。镜像地址如下：
+
+- 主服务（抓取 + Dashboard）：`ghcr.io/leecyno1/trendradar-visual:latest`
+- MCP 服务（可选）：`ghcr.io/leecyno1/trendradar-visual-mcp:latest`
+
+> 注意：首次构建后需要在 GitHub 的 “Packages” 页面把镜像可见性设为 Public（否则 Claw 拉取会 401）。
+
+## 3) 先构建并推送镜像（兼容方案）
 
 ClawCloud Run “Create App” 需要一个可拉取的镜像地址（Public/Private Registry 均可）。下面给出 Docker Hub 的例子：
 

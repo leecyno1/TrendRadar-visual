@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block content %}
+  <section>
+    <div class="flex items-end justify-between gap-3">
+      <div>
+        <h2 class="text-2xl font-semibold">Browse</h2>
+        <p class="muted text-sm mt-1">浏览本地 SQLite 新闻库（按日期切换）。</p>
+      </div>
+      <div class="muted text-xs">
+        Tips: URL 参数支持 <code>?date=YYYY-MM-DD&q=关键词</code>
+      </div>
+    </div>
+
+    <div class="mt-5 card rounded-2xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div>
+          <div class="muted text-xs mb-2">Date</div>
+          <select id="date" class="input w-full rounded-xl px-3 py-2"></select>
+        </div>
+        <div>
+          <div class="muted text-xs mb-2">Platform</div>
+          <select id="platform" class="input w-full rounded-xl px-3 py-2">
+            <option value="">All</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <div class="muted text-xs mb-2">Search</div>
+          <div class="flex gap-2">
+            <input id="q" class="input w-full rounded-xl px-4 py-2 outline-none" placeholder="标题关键词（LIKE）" />
+            <button id="go" class="btn rounded-xl px-4 py-2 font-medium">Go</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between">
+        <div id="summary" class="muted text-xs">—</div>
+        <div class="flex gap-2">
+          <button id="prev" class="btn rounded-lg px-3 py-2 text-sm">Prev</button>
+          <button id="next" class="btn rounded-lg px-3 py-2 text-sm">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 card rounded-2xl overflow-hidden">
+      <div class="overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-white/5 text-left">
+            <tr>
+              <th class="px-4 py-3">Title</th>
+              <th class="px-4 py-3">Platform</th>
+              <th class="px-4 py-3">Rank</th>
+              <th class="px-4 py-3">Count</th>
+              <th class="px-4 py-3">Last Seen</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const qs = new URLSearchParams(window.location.search);
+    const state = {
+      date: qs.get('date') || '',
+      q: qs.get('q') || '',
+      platform: qs.get('platform_id') || '',
+      limit: 50,
+      offset: 0,
+    };
+
+    const elDate = document.getElementById('date');
+    const elPlatform = document.getElementById('platform');
+    const elQ = document.getElementById('q');
+    const elRows = document.getElementById('rows');
+    const elSummary = document.getElementById('summary');
+
+    function esc(s) {
+      return (s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function setUrl() {
+      const p = new URLSearchParams();
+      if (state.date) p.set('date', state.date);
+      if (state.q) p.set('q', state.q);
+      if (state.platform) p.set('platform_id', state.platform);
+      history.replaceState(null, '', '/browse?' + p.toString());
+    }
+
+    async function loadDates() {
+      const r = await fetch('/api/dates');
+      const dates = r.ok ? await r.json() : [];
+      elDate.innerHTML = '';
+      for (const d of dates) {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        elDate.appendChild(opt);
+      }
+      if (!state.date && dates.length) state.date = dates[0];
+      elDate.value = state.date;
+    }
+
+    async function loadPlatforms() {
+      elPlatform.innerHTML = '<option value="">All</option>';
+      if (!state.date) return;
+      const r = await fetch('/api/platforms?date=' + encodeURIComponent(state.date));
+      if (!r.ok) return;
+      const platforms = await r.json();
+      for (const p of platforms) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name} (${p.id})`;
+        elPlatform.appendChild(opt);
+      }
+      elPlatform.value = state.platform;
+    }
+
+    async function loadNews() {
+      if (!state.date) return;
+      const p = new URLSearchParams();
+      p.set('date', state.date);
+      if (state.q) p.set('q', state.q);
+      if (state.platform) p.set('platform_id', state.platform);
+      p.set('limit', String(state.limit));
+      p.set('offset', String(state.offset));
+      const r = await fetch('/api/news?' + p.toString());
+      if (!r.ok) {
+        elRows.innerHTML = `<tr><td class="px-4 py-6 muted" colspan="5">Failed to load</td></tr>`;
+        return;
+      }
+      const data = await r.json();
+      elSummary.textContent = `Total: ${data.total} · Showing ${data.items.length} · Offset ${data.offset}`;
+      elRows.innerHTML = data.items.map(it => {
+        const title = esc(it.title);
+        const url = it.url || it.mobile_url || '';
+        const link = url ? `<a href="${esc(url)}" target="_blank" class="hover:underline">${title}</a>` : title;
+        return `
+          <tr class="border-t border-white/5 hover:bg-white/5">
+            <td class="px-4 py-3">${link}</td>
+            <td class="px-4 py-3 muted">${esc(it.platform_name || it.platform_id)}</td>
+            <td class="px-4 py-3">${it.rank}</td>
+            <td class="px-4 py-3">${it.crawl_count}</td>
+            <td class="px-4 py-3 muted">${esc(it.last_crawl_time)}</td>
+          </tr>
+        `;
+      }).join('');
+      setUrl();
+    }
+
+    document.getElementById('go').addEventListener('click', () => {
+      state.q = elQ.value.trim();
+      state.offset = 0;
+      loadNews();
+    });
+
+    elQ.value = state.q;
+    document.getElementById('prev').addEventListener('click', () => {
+      state.offset = Math.max(0, state.offset - state.limit);
+      loadNews();
+    });
+    document.getElementById('next').addEventListener('click', () => {
+      state.offset += state.limit;
+      loadNews();
+    });
+
+    elDate.addEventListener('change', async () => {
+      state.date = elDate.value;
+      state.offset = 0;
+      await loadPlatforms();
+      await loadNews();
+    });
+    elPlatform.addEventListener('change', async () => {
+      state.platform = elPlatform.value;
+      state.offset = 0;
+      await loadNews();
+    });
+
+    (async () => {
+      await loadDates();
+      await loadPlatforms();
+      await loadNews();
+    })();
+  </script>
+{% endblock %}
+

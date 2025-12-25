@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="mt-6">
+    <div class="glass rounded-2xl p-8">
+      <div class="text-center">
+        <h1 class="text-3xl font-semibold tracking-tight">热点，不用刷屏</h1>
+        <p class="muted mt-3">一个界面：看报告、搜新闻、改配置、手动触发爬取。</p>
+      </div>
+
+      <div class="mt-8 mx-auto max-w-2xl">
+        <div class="card rounded-2xl p-4">
+          <div class="flex items-center gap-3">
+            <input id="q" class="input w-full rounded-xl px-4 py-3 outline-none" placeholder="搜索标题关键词，例如：AI / 特斯拉 / 教育政策" />
+            <button id="go" class="btn rounded-xl px-4 py-3 font-medium">Search</button>
+          </div>
+          <div class="muted text-xs mt-3">
+            提示：搜索会跳转到 Browse 页面，并用最新日期数据检索。
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <a class="card rounded-xl p-4 hover:border-white/20 transition" href="/reports">
+            <div class="font-medium">Reports</div>
+            <div class="muted text-xs mt-1">查看最新/历史可视化报告</div>
+          </a>
+          <a class="card rounded-xl p-4 hover:border-white/20 transition" href="/browse">
+            <div class="font-medium">Browse</div>
+            <div class="muted text-xs mt-1">按日期/平台/关键词浏览新闻库</div>
+          </a>
+          <a class="card rounded-xl p-4 hover:border-white/20 transition" href="/manage">
+            <div class="font-medium">Manage</div>
+            <div class="muted text-xs mt-1">编辑配置与词库，触发爬取</div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    async function fetchLatestDate() {
+      const r = await fetch('/api/dates');
+      if (!r.ok) return null;
+      const dates = await r.json();
+      return dates && dates.length ? dates[0] : null;
+    }
+
+    document.getElementById('go').addEventListener('click', async () => {
+      const q = document.getElementById('q').value.trim();
+      const date = await fetchLatestDate();
+      const params = new URLSearchParams();
+      if (date) params.set('date', date);
+      if (q) params.set('q', q);
+      window.location.href = '/browse?' + params.toString();
+    });
+
+    document.getElementById('q').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('go').click();
+    });
+  </script>
+{% endblock %}
+

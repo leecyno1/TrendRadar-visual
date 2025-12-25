@@ -1,0 +1,838 @@
+{% extends "base.html" %}
+{% block content %}
+  <section>
+    <div class="flex items-end justify-between gap-3">
+      <div>
+        <h2 class="text-2xl font-semibold">Manage</h2>
+        <p class="muted text-sm mt-1">结构化配置 + 高级 YAML 编辑，并可手动触发一次爬取。</p>
+      </div>
+      <div class="muted text-xs">
+        {% if admin_token_required %}
+          需要 <code>ADMIN_TOKEN</code>，请求头：<code>X-Admin-Token</code>
+        {% else %}
+          当前未设置 <code>ADMIN_TOKEN</code>（不建议公网暴露）
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="mt-5 card rounded-2xl p-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div class="md:col-span-2">
+          <div class="muted text-xs mb-2">Admin Token</div>
+          <input id="token" class="input w-full rounded-xl px-4 py-2 outline-none" placeholder="留空表示不发送（若服务端要求会 401）" />
+        </div>
+        <div class="flex gap-2">
+          <button id="saveToken" class="btn rounded-xl px-4 py-2 font-medium w-full">Save Token</button>
+          <button id="system" class="btn rounded-xl px-4 py-2 font-medium w-full">System</button>
+        </div>
+      </div>
+      <div id="sys" class="muted text-xs mt-3"></div>
+    </div>
+
+    <div class="mt-5 card rounded-2xl p-4">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="font-medium">Runtime / Env</div>
+          <div class="muted text-xs mt-1">查看环境变量、Claw 可复制 env 片段，以及最终生效配置（包含 env 覆盖）。</div>
+        </div>
+        <div class="flex gap-2">
+          <button id="refreshRuntime" class="btn rounded-lg px-3 py-2 text-sm">Refresh</button>
+          <button id="copyEnv" class="btn rounded-lg px-3 py-2 text-sm">Copy Env Snippet</button>
+        </div>
+      </div>
+      <div class="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div class="card rounded-xl p-3">
+          <div class="muted text-xs mb-2">Env (redacted)</div>
+          <pre id="envDump" class="text-xs whitespace-pre-wrap muted"></pre>
+        </div>
+        <div class="card rounded-xl p-3">
+          <div class="muted text-xs mb-2">Claw .env snippet</div>
+          <pre id="envSnippet" class="text-xs whitespace-pre-wrap"></pre>
+          <div id="envCopyMsg" class="muted text-xs mt-2"></div>
+        </div>
+        <div class="card rounded-xl p-3">
+          <div class="muted text-xs mb-2">Effective config (redacted)</div>
+          <pre id="effectiveDump" class="text-xs whitespace-pre-wrap muted"></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div class="card rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium">Quick Settings</div>
+            <div class="muted text-xs mt-1">常用配置项表单化编辑（保存会写回 config.yaml）。</div>
+          </div>
+          <div class="flex gap-2">
+            <button id="loadQuick" class="btn rounded-lg px-3 py-2 text-sm">Load</button>
+            <button id="saveQuick" class="btn rounded-lg px-3 py-2 text-sm">Save</button>
+            <button id="resetConfig" class="btn rounded-lg px-3 py-2 text-sm">Reset</button>
+          </div>
+        </div>
+        <div class="mt-3">
+          <label class="inline-flex items-center gap-2 text-sm">
+            <input id="q_keep_secrets" type="checkbox" class="accent-indigo-400" checked />
+            <span class="muted">Keep secrets if blank (avoid wiping tokens/passwords)</span>
+          </label>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="card rounded-xl p-3">
+            <div class="font-medium text-sm">App</div>
+            <div class="mt-2 grid grid-cols-1 gap-2">
+              <label class="muted text-xs">Version check URL</label>
+              <input id="q_version_check_url" class="input rounded-lg px-3 py-2 text-sm" placeholder="https://raw.githubusercontent.com/.../version" />
+              <label class="muted text-xs">Timezone</label>
+              <input id="q_timezone" class="input rounded-lg px-3 py-2 text-sm" placeholder="Asia/Shanghai" />
+              <label class="inline-flex items-center gap-2 text-sm mt-1">
+                <input id="q_show_version_update" type="checkbox" class="accent-indigo-400" />
+                <span class="muted">Show version update</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card rounded-xl p-3">
+            <div class="font-medium text-sm">Crawler</div>
+            <div class="mt-2 grid grid-cols-1 gap-2">
+              <label class="inline-flex items-center gap-2 text-sm">
+                <input id="q_enable_crawler" type="checkbox" class="accent-indigo-400" />
+                <span class="muted">Enable crawler</span>
+              </label>
+              <label class="muted text-xs">Request interval (ms)</label>
+              <input id="q_request_interval" type="number" class="input rounded-lg px-3 py-2 text-sm" min="50" step="50" />
+              <label class="inline-flex items-center gap-2 text-sm mt-1">
+                <input id="q_use_proxy" type="checkbox" class="accent-indigo-400" />
+                <span class="muted">Use proxy</span>
+              </label>
+              <label class="muted text-xs">Default proxy</label>
+              <input id="q_default_proxy" class="input rounded-lg px-3 py-2 text-sm" placeholder="http://127.0.0.1:10801" />
+            </div>
+          </div>
+
+          <div class="card rounded-xl p-3">
+            <div class="font-medium text-sm">Report</div>
+            <div class="mt-2 grid grid-cols-1 gap-2">
+              <label class="muted text-xs">Mode</label>
+              <select id="q_report_mode" class="input rounded-lg px-3 py-2 text-sm">
+                <option value="daily">daily</option>
+                <option value="current">current</option>
+                <option value="incremental">incremental</option>
+              </select>
+              <label class="muted text-xs">Rank threshold</label>
+              <input id="q_rank_threshold" type="number" class="input rounded-lg px-3 py-2 text-sm" min="1" max="100" />
+              <label class="inline-flex items-center gap-2 text-sm mt-1">
+                <input id="q_sort_by_position_first" type="checkbox" class="accent-indigo-400" />
+                <span class="muted">Sort by position first</span>
+              </label>
+              <label class="muted text-xs">Max news per keyword (0 = unlimited)</label>
+              <input id="q_max_news_per_keyword" type="number" class="input rounded-lg px-3 py-2 text-sm" min="0" />
+              <label class="inline-flex items-center gap-2 text-sm mt-1">
+                <input id="q_reverse_content_order" type="checkbox" class="accent-indigo-400" />
+                <span class="muted">Reverse content order</span>
+              </label>
+              <label class="muted text-xs mt-2">Min title length (0 = off)</label>
+              <input id="q_min_title_length" type="number" class="input rounded-lg px-3 py-2 text-sm" min="0" />
+              <div class="mt-2 border-t border-white/10 pt-3">
+                <div class="font-medium text-sm">Fallback</div>
+                <div class="muted text-xs mt-1">防漏捕：当新闻不命中任何词组时，也可收录“全量合并 Top N”。</div>
+                <label class="muted text-xs mt-2">Always include Top N (0 = off)</label>
+                <input id="q_always_include_top_n" type="number" class="input rounded-lg px-3 py-2 text-sm" min="0" />
+                <label class="muted text-xs">Group name</label>
+                <input id="q_always_include_group_name" class="input rounded-lg px-3 py-2 text-sm" placeholder="综合 Top5" />
+                <label class="inline-flex items-center gap-2 text-sm mt-1">
+                  <input id="q_always_include_only_unmatched" type="checkbox" class="accent-indigo-400" />
+                  <span class="muted">Only include unmatched</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card rounded-xl p-3">
+            <div class="font-medium text-sm">Storage</div>
+            <div class="mt-2 grid grid-cols-1 gap-2">
+              <label class="muted text-xs">Backend</label>
+              <select id="q_storage_backend" class="input rounded-lg px-3 py-2 text-sm">
+                <option value="auto">auto</option>
+                <option value="local">local</option>
+                <option value="remote">remote</option>
+              </select>
+              <div class="grid grid-cols-3 gap-2 mt-1">
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input id="q_storage_sqlite" type="checkbox" class="accent-indigo-400" disabled />
+                  <span class="muted">sqlite</span>
+                </label>
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input id="q_storage_txt" type="checkbox" class="accent-indigo-400" />
+                  <span class="muted">txt</span>
+                </label>
+                <label class="inline-flex items-center gap-2 text-sm">
+                  <input id="q_storage_html" type="checkbox" class="accent-indigo-400" />
+                  <span class="muted">html</span>
+                </label>
+              </div>
+              <div class="muted text-xs">提示：邮件推送需要 html=true。</div>
+              <label class="muted text-xs">Local data dir</label>
+              <input id="q_local_data_dir" class="input rounded-lg px-3 py-2 text-sm" placeholder="output" />
+              <label class="muted text-xs">Local retention days (0 = keep)</label>
+              <input id="q_local_retention_days" type="number" class="input rounded-lg px-3 py-2 text-sm" min="0" />
+              <label class="muted text-xs">Remote retention days (0 = keep)</label>
+              <input id="q_remote_retention_days" type="number" class="input rounded-lg px-3 py-2 text-sm" min="0" />
+              <div class="mt-2 border-t border-white/10 pt-3">
+                <div class="font-medium text-sm">Remote Storage (S3/R2/OSS/COS)</div>
+                <div class="muted text-xs mt-1">当 backend=remote/auto 且配置齐全时生效。</div>
+                <div class="mt-3 grid grid-cols-1 gap-2">
+                  <label class="muted text-xs">Endpoint URL</label>
+                  <input id="q_s3_endpoint_url" class="input rounded-lg px-3 py-2 text-sm" placeholder="https://<account_id>.r2.cloudflarestorage.com" />
+                  <label class="muted text-xs">Bucket name</label>
+                  <input id="q_s3_bucket_name" class="input rounded-lg px-3 py-2 text-sm" placeholder="my-bucket" />
+                  <label class="muted text-xs">Access key id</label>
+                  <input id="q_s3_access_key_id" class="input rounded-lg px-3 py-2 text-sm" placeholder="AKIA..." />
+                  <label class="muted text-xs">Secret access key</label>
+                  <input id="q_s3_secret_access_key" type="password" class="input rounded-lg px-3 py-2 text-sm" placeholder="********" />
+                  <label class="muted text-xs">Region (optional)</label>
+                  <input id="q_s3_region" class="input rounded-lg px-3 py-2 text-sm" placeholder="auto / ap-guangzhou / cn-hangzhou" />
+                </div>
+              </div>
+              <div class="mt-2 border-t border-white/10 pt-3">
+                <div class="font-medium text-sm">Pull (Remote → Local)</div>
+                <div class="muted text-xs mt-1">用于 MCP/多实例场景：启动时自动拉取最近 N 天。</div>
+                <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <label class="inline-flex items-center gap-2 text-sm">
+                    <input id="q_pull_enabled" type="checkbox" class="accent-indigo-400" />
+                    <span class="muted">Enabled</span>
+                  </label>
+                  <div>
+                    <div class="muted text-xs mb-1">Days</div>
+                    <input id="q_pull_days" type="number" class="input rounded-lg px-3 py-2 text-sm" min="0" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 card rounded-xl p-3">
+          <div class="font-medium text-sm">Push Window</div>
+          <div class="mt-2 grid grid-cols-1 md:grid-cols-4 gap-2">
+            <label class="inline-flex items-center gap-2 text-sm md:col-span-1">
+              <input id="q_push_window_enabled" type="checkbox" class="accent-indigo-400" />
+              <span class="muted">Enabled</span>
+            </label>
+            <div>
+              <div class="muted text-xs mb-1">Start</div>
+              <input id="q_push_window_start" class="input rounded-lg px-3 py-2 text-sm" placeholder="20:00" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">End</div>
+              <input id="q_push_window_end" class="input rounded-lg px-3 py-2 text-sm" placeholder="22:00" />
+            </div>
+            <label class="inline-flex items-center gap-2 text-sm md:col-span-1">
+              <input id="q_push_window_once" type="checkbox" class="accent-indigo-400" />
+              <span class="muted">Once per day</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="mt-4 card rounded-xl p-3">
+          <div class="font-medium text-sm">Notifications</div>
+          <div class="mt-2 grid grid-cols-1 gap-2">
+            <label class="inline-flex items-center gap-2 text-sm">
+              <input id="q_enable_notification" type="checkbox" class="accent-indigo-400" />
+              <span class="muted">Enable notification</span>
+            </label>
+          </div>
+          <div class="mt-3 border-t border-white/10 pt-3">
+            <div class="font-medium text-sm">Batch / Rate Limits</div>
+            <div class="muted text-xs mt-1">影响消息分批与发送节奏（建议按默认值）。</div>
+            <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <div class="muted text-xs mb-1">Message batch size (bytes)</div>
+                <input id="q_message_batch_size" type="number" class="input rounded-lg px-3 py-2 text-sm" min="500" step="100" />
+              </div>
+              <div>
+                <div class="muted text-xs mb-1">Batch send interval (seconds)</div>
+                <input id="q_batch_send_interval" type="number" class="input rounded-lg px-3 py-2 text-sm" min="0" step="0.5" />
+              </div>
+              <div>
+                <div class="muted text-xs mb-1">Feishu batch size (bytes)</div>
+                <input id="q_feishu_batch_size" type="number" class="input rounded-lg px-3 py-2 text-sm" min="1000" step="500" />
+              </div>
+              <div>
+                <div class="muted text-xs mb-1">DingTalk batch size (bytes)</div>
+                <input id="q_dingtalk_batch_size" type="number" class="input rounded-lg px-3 py-2 text-sm" min="1000" step="500" />
+              </div>
+              <div>
+                <div class="muted text-xs mb-1">Bark batch size (bytes)</div>
+                <input id="q_bark_batch_size" type="number" class="input rounded-lg px-3 py-2 text-sm" min="500" step="100" />
+              </div>
+              <div>
+                <div class="muted text-xs mb-1">Slack batch size (bytes)</div>
+                <input id="q_slack_batch_size" type="number" class="input rounded-lg px-3 py-2 text-sm" min="500" step="100" />
+              </div>
+              <div class="md:col-span-2">
+                <div class="muted text-xs mb-1">Feishu message separator</div>
+                <input id="q_feishu_message_separator" class="input rounded-lg px-3 py-2 text-sm" placeholder="━━━━━━━━━━━━━━━━━━━" />
+              </div>
+              <div class="md:col-span-2">
+                <div class="muted text-xs mb-1">Max accounts per channel</div>
+                <input id="q_max_accounts_per_channel" type="number" class="input rounded-lg px-3 py-2 text-sm" min="1" max="10" />
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div>
+              <div class="muted text-xs mb-1">Feishu webhook(s)</div>
+              <input id="q_feishu_url" class="input rounded-lg px-3 py-2 text-sm" placeholder="https://...;https://..." />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">DingTalk webhook(s)</div>
+              <input id="q_dingtalk_url" class="input rounded-lg px-3 py-2 text-sm" placeholder="https://...;https://..." />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">WeCom webhook(s)</div>
+              <input id="q_wework_url" class="input rounded-lg px-3 py-2 text-sm" placeholder="https://...;https://..." />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">WeCom msg type</div>
+              <select id="q_wework_msg_type" class="input rounded-lg px-3 py-2 text-sm">
+                <option value="markdown">markdown</option>
+                <option value="text">text</option>
+              </select>
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Telegram bot token(s)</div>
+              <input id="q_telegram_bot_token" class="input rounded-lg px-3 py-2 text-sm" placeholder="token1;token2" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Telegram chat id(s)</div>
+              <input id="q_telegram_chat_id" class="input rounded-lg px-3 py-2 text-sm" placeholder="id1;id2" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Email to (comma separated)</div>
+              <input id="q_email_to" class="input rounded-lg px-3 py-2 text-sm" placeholder="a@x.com,b@y.com" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Email from</div>
+              <input id="q_email_from" class="input rounded-lg px-3 py-2 text-sm" placeholder="sender@x.com" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Email password</div>
+              <input id="q_email_password" class="input rounded-lg px-3 py-2 text-sm" placeholder="app-password" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">SMTP server / port</div>
+              <div class="flex gap-2">
+                <input id="q_email_smtp_server" class="input rounded-lg px-3 py-2 text-sm w-full" placeholder="smtp.qq.com" />
+                <input id="q_email_smtp_port" class="input rounded-lg px-3 py-2 text-sm w-28" placeholder="465" />
+              </div>
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">ntfy server</div>
+              <input id="q_ntfy_server_url" class="input rounded-lg px-3 py-2 text-sm" placeholder="https://ntfy.sh" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">ntfy topic(s)</div>
+              <input id="q_ntfy_topic" class="input rounded-lg px-3 py-2 text-sm" placeholder="topic1;topic2" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">ntfy token(s)</div>
+              <input id="q_ntfy_token" class="input rounded-lg px-3 py-2 text-sm" placeholder=";token2（无 token 的用空占位）" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Bark url(s)</div>
+              <input id="q_bark_url" class="input rounded-lg px-3 py-2 text-sm" placeholder="https://api.day.app/..." />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Slack webhook(s)</div>
+              <input id="q_slack_webhook_url" class="input rounded-lg px-3 py-2 text-sm" placeholder="https://hooks.slack.com/..." />
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 card rounded-xl p-3">
+          <div class="font-medium text-sm">Weights</div>
+          <div class="muted text-xs mt-1">组合热度算法权重（建议总和为 1）。</div>
+          <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div>
+              <div class="muted text-xs mb-1">Rank weight</div>
+              <input id="q_rank_weight" type="number" class="input rounded-lg px-3 py-2 text-sm" step="0.05" min="0" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Frequency weight</div>
+              <input id="q_frequency_weight" type="number" class="input rounded-lg px-3 py-2 text-sm" step="0.05" min="0" />
+            </div>
+            <div>
+              <div class="muted text-xs mb-1">Hotness weight</div>
+              <input id="q_hotness_weight" type="number" class="input rounded-lg px-3 py-2 text-sm" step="0.05" min="0" />
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 card rounded-xl p-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium text-sm">Platforms</div>
+              <div class="muted text-xs mt-1">新增/删除/修改平台列表（id 必须匹配 NewsNow source）。</div>
+            </div>
+            <button id="addPlatform" class="btn rounded-lg px-3 py-2 text-sm">Add</button>
+          </div>
+          <div class="mt-3 space-y-2" id="platformRows"></div>
+        </div>
+
+        <div id="quickMsg" class="muted text-xs mt-3"></div>
+      </div>
+
+      <div class="card rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium">Advanced: config.yaml</div>
+            <div class="muted text-xs mt-1">完整 YAML，可直接编辑保存（会自动备份）。</div>
+          </div>
+          <div class="flex gap-2">
+            <button id="loadConfig" class="btn rounded-lg px-3 py-2 text-sm">Load</button>
+            <button id="saveConfig" class="btn rounded-lg px-3 py-2 text-sm">Save</button>
+          </div>
+        </div>
+        <textarea id="config" class="input w-full rounded-xl p-3 mt-3 h-[55vh] font-mono text-xs"></textarea>
+        <div id="configMsg" class="muted text-xs mt-2"></div>
+      </div>
+
+      <div class="card rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-medium">frequency_words.txt</div>
+            <div class="muted text-xs mt-1">关键词/词组配置（支持 + ! @；支持用 [标题] 作为分组名）。</div>
+          </div>
+          <div class="flex gap-2">
+            <button id="loadWords" class="btn rounded-lg px-3 py-2 text-sm">Load</button>
+            <button id="saveWords" class="btn rounded-lg px-3 py-2 text-sm">Save</button>
+            <button id="resetWords" class="btn rounded-lg px-3 py-2 text-sm">Reset</button>
+          </div>
+        </div>
+        <textarea id="words" class="input w-full rounded-xl p-3 mt-3 h-[45vh] font-mono text-xs"></textarea>
+        <div id="wordsMsg" class="muted text-xs mt-2"></div>
+
+        <div class="mt-4 border-t border-white/10 pt-4 flex items-center justify-between">
+          <div>
+            <div class="font-medium">Actions</div>
+            <div class="muted text-xs mt-1">手动触发一次抓取（后台执行）。</div>
+          </div>
+          <button id="crawl" class="btn rounded-xl px-4 py-2 font-medium">Trigger Crawl</button>
+        </div>
+        <div id="crawlMsg" class="muted text-xs mt-2"></div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const tokenKey = 'trendradar_admin_token';
+    const elToken = document.getElementById('token');
+    const elSys = document.getElementById('sys');
+    const quickMsg = document.getElementById('quickMsg');
+
+    function getToken() {
+      return (localStorage.getItem(tokenKey) || '').trim();
+    }
+    function setToken(v) {
+      localStorage.setItem(tokenKey, (v || '').trim());
+      elToken.value = getToken();
+    }
+    function authHeaders() {
+      const t = getToken();
+      return t ? { 'X-Admin-Token': t } : {};
+    }
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ 'Content-Type': 'application/json' }, authHeaders(), (opts.headers || {}));
+      const r = await fetch(path, Object.assign({}, opts, { headers }));
+      const text = await r.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+      if (!r.ok) {
+        const msg = data && data.detail ? data.detail : (typeof data === 'string' ? data : 'Request failed');
+        throw new Error(`${r.status} ${msg}`);
+      }
+      return data;
+    }
+
+    setToken(getToken());
+    document.getElementById('saveToken').addEventListener('click', () => setToken(elToken.value));
+
+    document.getElementById('system').addEventListener('click', async () => {
+      try {
+        const data = await api('/api/admin/system', { method: 'GET' });
+        elSys.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        elSys.textContent = String(e);
+      }
+    });
+
+    function get(obj, path, fallback) {
+      const parts = path.split('.');
+      let cur = obj;
+      for (const p of parts) {
+        if (!cur || typeof cur !== 'object' || !(p in cur)) return fallback;
+        cur = cur[p];
+      }
+      return cur === undefined ? fallback : cur;
+    }
+
+    function platformRow(id = '', name = '') {
+      const wrap = document.createElement('div');
+      wrap.className = 'grid grid-cols-[1fr_1fr_auto] gap-2';
+      wrap.innerHTML = `
+        <input class="input rounded-lg px-3 py-2 text-sm" placeholder="id (e.g. weibo)" value="${id.replace(/"/g,'&quot;')}">
+        <input class="input rounded-lg px-3 py-2 text-sm" placeholder="name (e.g. 微博)" value="${name.replace(/"/g,'&quot;')}">
+        <button class="btn rounded-lg px-3 py-2 text-sm">Del</button>
+      `;
+      wrap.querySelector('button').addEventListener('click', () => wrap.remove());
+      return wrap;
+    }
+
+    async function loadQuick() {
+      quickMsg.textContent = 'Loading...';
+      const data = await api('/api/admin/config/parsed', { method: 'GET' });
+      const cfg = data.config || {};
+
+      document.getElementById('q_timezone').value = get(cfg, 'app.timezone', 'Asia/Shanghai');
+      document.getElementById('q_show_version_update').checked = !!get(cfg, 'app.show_version_update', true);
+      document.getElementById('q_version_check_url').value = get(cfg, 'app.version_check_url', '');
+
+      document.getElementById('q_enable_crawler').checked = !!get(cfg, 'crawler.enable_crawler', true);
+      document.getElementById('q_request_interval').value = get(cfg, 'crawler.request_interval', 1000);
+      document.getElementById('q_use_proxy').checked = !!get(cfg, 'crawler.use_proxy', false);
+      document.getElementById('q_default_proxy').value = get(cfg, 'crawler.default_proxy', '');
+
+      document.getElementById('q_report_mode').value = get(cfg, 'report.mode', 'daily');
+      document.getElementById('q_rank_threshold').value = get(cfg, 'report.rank_threshold', 5);
+      document.getElementById('q_sort_by_position_first').checked = !!get(cfg, 'report.sort_by_position_first', false);
+      document.getElementById('q_max_news_per_keyword').value = get(cfg, 'report.max_news_per_keyword', 0);
+      document.getElementById('q_reverse_content_order').checked = !!get(cfg, 'report.reverse_content_order', false);
+      document.getElementById('q_min_title_length').value = get(cfg, 'report.min_title_length', 15);
+      document.getElementById('q_always_include_top_n').value = get(cfg, 'report.always_include_top_n', 0);
+      document.getElementById('q_always_include_group_name').value = get(cfg, 'report.always_include_group_name', '');
+      document.getElementById('q_always_include_only_unmatched').checked = !!get(cfg, 'report.always_include_only_unmatched', true);
+
+      document.getElementById('q_storage_backend').value = get(cfg, 'storage.backend', 'auto');
+      document.getElementById('q_storage_sqlite').checked = true;
+      document.getElementById('q_storage_txt').checked = !!get(cfg, 'storage.formats.txt', false);
+      document.getElementById('q_storage_html').checked = !!get(cfg, 'storage.formats.html', false);
+      document.getElementById('q_local_data_dir').value = get(cfg, 'storage.local.data_dir', 'output');
+      document.getElementById('q_local_retention_days').value = get(cfg, 'storage.local.retention_days', 0);
+      document.getElementById('q_remote_retention_days').value = get(cfg, 'storage.remote.retention_days', 0);
+      document.getElementById('q_s3_endpoint_url').value = get(cfg, 'storage.remote.endpoint_url', '');
+      document.getElementById('q_s3_bucket_name').value = get(cfg, 'storage.remote.bucket_name', '');
+      document.getElementById('q_s3_access_key_id').value = get(cfg, 'storage.remote.access_key_id', '');
+      document.getElementById('q_s3_secret_access_key').value = get(cfg, 'storage.remote.secret_access_key', '');
+      document.getElementById('q_s3_region').value = get(cfg, 'storage.remote.region', '');
+      document.getElementById('q_pull_enabled').checked = !!get(cfg, 'storage.pull.enabled', false);
+      document.getElementById('q_pull_days').value = get(cfg, 'storage.pull.days', 7);
+
+      document.getElementById('q_push_window_enabled').checked = !!get(cfg, 'notification.push_window.enabled', false);
+      document.getElementById('q_push_window_start').value = get(cfg, 'notification.push_window.time_range.start', '20:00');
+      document.getElementById('q_push_window_end').value = get(cfg, 'notification.push_window.time_range.end', '22:00');
+      document.getElementById('q_push_window_once').checked = !!get(cfg, 'notification.push_window.once_per_day', true);
+
+      document.getElementById('q_enable_notification').checked = !!get(cfg, 'notification.enable_notification', true);
+      document.getElementById('q_message_batch_size').value = get(cfg, 'notification.message_batch_size', 4000);
+      document.getElementById('q_dingtalk_batch_size').value = get(cfg, 'notification.dingtalk_batch_size', 20000);
+      document.getElementById('q_feishu_batch_size').value = get(cfg, 'notification.feishu_batch_size', 30000);
+      document.getElementById('q_bark_batch_size').value = get(cfg, 'notification.bark_batch_size', 4000);
+      document.getElementById('q_slack_batch_size').value = get(cfg, 'notification.slack_batch_size', 4000);
+      document.getElementById('q_batch_send_interval').value = get(cfg, 'notification.batch_send_interval', 3);
+      document.getElementById('q_feishu_message_separator').value = get(cfg, 'notification.feishu_message_separator', '━━━━━━━━━━━━━━━━━━━');
+      document.getElementById('q_max_accounts_per_channel').value = get(cfg, 'notification.max_accounts_per_channel', 3);
+      const wh = get(cfg, 'notification.webhooks', {});
+      document.getElementById('q_feishu_url').value = get(wh, 'feishu_url', '');
+      document.getElementById('q_dingtalk_url').value = get(wh, 'dingtalk_url', '');
+      document.getElementById('q_wework_url').value = get(wh, 'wework_url', '');
+      document.getElementById('q_wework_msg_type').value = get(wh, 'wework_msg_type', 'markdown');
+      document.getElementById('q_telegram_bot_token').value = get(wh, 'telegram_bot_token', '');
+      document.getElementById('q_telegram_chat_id').value = get(wh, 'telegram_chat_id', '');
+      document.getElementById('q_email_to').value = get(wh, 'email_to', '');
+      document.getElementById('q_email_from').value = get(wh, 'email_from', '');
+      document.getElementById('q_email_password').value = get(wh, 'email_password', '');
+      document.getElementById('q_email_smtp_server').value = get(wh, 'email_smtp_server', '');
+      document.getElementById('q_email_smtp_port').value = get(wh, 'email_smtp_port', '');
+      document.getElementById('q_ntfy_server_url').value = get(wh, 'ntfy_server_url', 'https://ntfy.sh');
+      document.getElementById('q_ntfy_topic').value = get(wh, 'ntfy_topic', '');
+      document.getElementById('q_ntfy_token').value = get(wh, 'ntfy_token', '');
+      document.getElementById('q_bark_url').value = get(wh, 'bark_url', '');
+      document.getElementById('q_slack_webhook_url').value = get(wh, 'slack_webhook_url', '');
+
+      document.getElementById('q_rank_weight').value = get(cfg, 'weight.rank_weight', 0.6);
+      document.getElementById('q_frequency_weight').value = get(cfg, 'weight.frequency_weight', 0.3);
+      document.getElementById('q_hotness_weight').value = get(cfg, 'weight.hotness_weight', 0.1);
+
+      const platformWrap = document.getElementById('platformRows');
+      platformWrap.innerHTML = '';
+      const platforms = get(cfg, 'platforms', []);
+      if (Array.isArray(platforms)) {
+        for (const p of platforms) {
+          platformWrap.appendChild(platformRow(p.id || '', p.name || ''));
+        }
+      }
+      if (!platformWrap.children.length) platformWrap.appendChild(platformRow('', ''));
+
+      quickMsg.textContent = 'Loaded.';
+    }
+
+    function collectPlatforms() {
+      const rows = Array.from(document.getElementById('platformRows').children);
+      const list = [];
+      for (const r of rows) {
+        const inputs = r.querySelectorAll('input');
+        const id = (inputs[0].value || '').trim();
+        const name = (inputs[1].value || '').trim();
+        if (!id) continue;
+        list.push({ id, name: name || id });
+      }
+      return list;
+    }
+
+    async function saveQuick() {
+      quickMsg.textContent = 'Saving...';
+      const keepSecrets = document.getElementById('q_keep_secrets').checked;
+      const patch = {
+        app: {
+          version_check_url: document.getElementById('q_version_check_url').value.trim(),
+          timezone: document.getElementById('q_timezone').value.trim() || 'Asia/Shanghai',
+          show_version_update: document.getElementById('q_show_version_update').checked,
+        },
+        crawler: {
+          enable_crawler: document.getElementById('q_enable_crawler').checked,
+          request_interval: Number(document.getElementById('q_request_interval').value || 1000),
+          use_proxy: document.getElementById('q_use_proxy').checked,
+          default_proxy: document.getElementById('q_default_proxy').value.trim(),
+        },
+        report: {
+          mode: document.getElementById('q_report_mode').value,
+          rank_threshold: Number(document.getElementById('q_rank_threshold').value || 5),
+          sort_by_position_first: document.getElementById('q_sort_by_position_first').checked,
+          max_news_per_keyword: Number(document.getElementById('q_max_news_per_keyword').value || 0),
+          reverse_content_order: document.getElementById('q_reverse_content_order').checked,
+          min_title_length: Number(document.getElementById('q_min_title_length').value || 15),
+          always_include_top_n: Number(document.getElementById('q_always_include_top_n').value || 0),
+          always_include_group_name: document.getElementById('q_always_include_group_name').value.trim(),
+          always_include_only_unmatched: document.getElementById('q_always_include_only_unmatched').checked,
+        },
+        storage: {
+          backend: document.getElementById('q_storage_backend').value,
+          formats: {
+            sqlite: true,
+            txt: document.getElementById('q_storage_txt').checked,
+            html: document.getElementById('q_storage_html').checked,
+          },
+          local: {
+            data_dir: document.getElementById('q_local_data_dir').value.trim() || 'output',
+            retention_days: Number(document.getElementById('q_local_retention_days').value || 0),
+          },
+          remote: {
+            retention_days: Number(document.getElementById('q_remote_retention_days').value || 0),
+            endpoint_url: document.getElementById('q_s3_endpoint_url').value.trim(),
+            bucket_name: document.getElementById('q_s3_bucket_name').value.trim(),
+            access_key_id: document.getElementById('q_s3_access_key_id').value.trim(),
+            secret_access_key: document.getElementById('q_s3_secret_access_key').value.trim(),
+            region: document.getElementById('q_s3_region').value.trim(),
+          },
+          pull: {
+            enabled: document.getElementById('q_pull_enabled').checked,
+            days: Number(document.getElementById('q_pull_days').value || 7),
+          },
+        },
+        notification: {
+          enable_notification: document.getElementById('q_enable_notification').checked,
+          message_batch_size: Number(document.getElementById('q_message_batch_size').value || 4000),
+          dingtalk_batch_size: Number(document.getElementById('q_dingtalk_batch_size').value || 20000),
+          feishu_batch_size: Number(document.getElementById('q_feishu_batch_size').value || 30000),
+          bark_batch_size: Number(document.getElementById('q_bark_batch_size').value || 4000),
+          slack_batch_size: Number(document.getElementById('q_slack_batch_size').value || 4000),
+          batch_send_interval: Number(document.getElementById('q_batch_send_interval').value || 3),
+          feishu_message_separator: document.getElementById('q_feishu_message_separator').value,
+          max_accounts_per_channel: Number(document.getElementById('q_max_accounts_per_channel').value || 3),
+          push_window: {
+            enabled: document.getElementById('q_push_window_enabled').checked,
+            time_range: {
+              start: document.getElementById('q_push_window_start').value.trim() || '20:00',
+              end: document.getElementById('q_push_window_end').value.trim() || '22:00',
+            },
+            once_per_day: document.getElementById('q_push_window_once').checked,
+          },
+          webhooks: {
+            feishu_url: document.getElementById('q_feishu_url').value.trim(),
+            dingtalk_url: document.getElementById('q_dingtalk_url').value.trim(),
+            wework_url: document.getElementById('q_wework_url').value.trim(),
+            wework_msg_type: document.getElementById('q_wework_msg_type').value,
+            telegram_bot_token: document.getElementById('q_telegram_bot_token').value.trim(),
+            telegram_chat_id: document.getElementById('q_telegram_chat_id').value.trim(),
+            email_to: document.getElementById('q_email_to').value.trim(),
+            email_from: document.getElementById('q_email_from').value.trim(),
+            email_password: document.getElementById('q_email_password').value.trim(),
+            email_smtp_server: document.getElementById('q_email_smtp_server').value.trim(),
+            email_smtp_port: document.getElementById('q_email_smtp_port').value.trim(),
+            ntfy_server_url: document.getElementById('q_ntfy_server_url').value.trim() || 'https://ntfy.sh',
+            ntfy_topic: document.getElementById('q_ntfy_topic').value.trim(),
+            ntfy_token: document.getElementById('q_ntfy_token').value.trim(),
+            bark_url: document.getElementById('q_bark_url').value.trim(),
+            slack_webhook_url: document.getElementById('q_slack_webhook_url').value.trim(),
+          },
+        },
+        weight: {
+          rank_weight: Number(document.getElementById('q_rank_weight').value || 0),
+          frequency_weight: Number(document.getElementById('q_frequency_weight').value || 0),
+          hotness_weight: Number(document.getElementById('q_hotness_weight').value || 0),
+        },
+        platforms: collectPlatforms(),
+      };
+
+      if (keepSecrets) {
+        const secretPaths = [
+          ['storage','remote','secret_access_key'],
+          ['notification','webhooks','email_password'],
+          ['notification','webhooks','telegram_bot_token'],
+          ['notification','webhooks','ntfy_token'],
+          ['notification','webhooks','feishu_url'],
+          ['notification','webhooks','dingtalk_url'],
+          ['notification','webhooks','wework_url'],
+          ['notification','webhooks','slack_webhook_url'],
+          ['notification','webhooks','bark_url'],
+        ];
+        for (const path of secretPaths) {
+          let cur = patch;
+          for (let i = 0; i < path.length - 1; i++) {
+            if (!cur || typeof cur !== 'object') { cur = null; break; }
+            cur = cur[path[i]];
+          }
+          if (!cur || typeof cur !== 'object') continue;
+          const key = path[path.length - 1];
+          if (typeof cur[key] === 'string' && cur[key].trim() === '') {
+            delete cur[key];
+          }
+        }
+      }
+
+      try {
+        const res = await api('/api/admin/config/patch', { method: 'PUT', body: JSON.stringify({ patch }) });
+        quickMsg.textContent = 'Saved: ' + (res.path || '');
+      } catch (e) {
+        quickMsg.textContent = String(e);
+      }
+    }
+
+    document.getElementById('addPlatform').addEventListener('click', () => {
+      document.getElementById('platformRows').appendChild(platformRow('', ''));
+    });
+    document.getElementById('loadQuick').addEventListener('click', () => loadQuick().catch(e => quickMsg.textContent = String(e)));
+    document.getElementById('saveQuick').addEventListener('click', () => saveQuick());
+    document.getElementById('resetConfig').addEventListener('click', async () => {
+      quickMsg.textContent = 'Resetting...';
+      try {
+        await api('/api/admin/config/reset', { method: 'POST', body: '{}' });
+        await loadQuick();
+        quickMsg.textContent = 'Reset done.';
+      } catch (e) {
+        quickMsg.textContent = String(e);
+      }
+    });
+
+    const elConfig = document.getElementById('config');
+    const elWords = document.getElementById('words');
+    const configMsg = document.getElementById('configMsg');
+    const wordsMsg = document.getElementById('wordsMsg');
+    const crawlMsg = document.getElementById('crawlMsg');
+
+    document.getElementById('loadConfig').addEventListener('click', async () => {
+      configMsg.textContent = 'Loading...';
+      try {
+        const data = await api('/api/admin/config', { method: 'GET' });
+        elConfig.value = data.content || '';
+        configMsg.textContent = 'Loaded: ' + (data.path || '');
+      } catch (e) {
+        configMsg.textContent = String(e);
+      }
+    });
+
+    document.getElementById('saveConfig').addEventListener('click', async () => {
+      configMsg.textContent = 'Saving...';
+      try {
+        const data = await api('/api/admin/config', { method: 'PUT', body: JSON.stringify({ content: elConfig.value }) });
+        configMsg.textContent = 'Saved: ' + (data.path || '');
+      } catch (e) {
+        configMsg.textContent = String(e);
+      }
+    });
+
+    document.getElementById('loadWords').addEventListener('click', async () => {
+      wordsMsg.textContent = 'Loading...';
+      try {
+        const data = await api('/api/admin/frequency-words', { method: 'GET' });
+        elWords.value = data.content || '';
+        wordsMsg.textContent = 'Loaded: ' + (data.path || '');
+      } catch (e) {
+        wordsMsg.textContent = String(e);
+      }
+    });
+
+    document.getElementById('saveWords').addEventListener('click', async () => {
+      wordsMsg.textContent = 'Saving...';
+      try {
+        const data = await api('/api/admin/frequency-words', { method: 'PUT', body: JSON.stringify({ content: elWords.value }) });
+        wordsMsg.textContent = 'Saved: ' + (data.path || '');
+      } catch (e) {
+        wordsMsg.textContent = String(e);
+      }
+    });
+
+    document.getElementById('resetWords').addEventListener('click', async () => {
+      wordsMsg.textContent = 'Resetting...';
+      try {
+        const data = await api('/api/admin/frequency-words/reset', { method: 'POST', body: '{}' });
+        await api('/api/admin/frequency-words', { method: 'GET' }).then(d => { elWords.value = d.content || ''; });
+        wordsMsg.textContent = 'Reset: ' + (data.path || '');
+      } catch (e) {
+        wordsMsg.textContent = String(e);
+      }
+    });
+
+    document.getElementById('crawl').addEventListener('click', async () => {
+      crawlMsg.textContent = 'Starting...';
+      try {
+        const data = await api('/api/admin/actions/trigger-crawl', { method: 'POST', body: '{}' });
+        crawlMsg.textContent = 'Triggered: ' + JSON.stringify(data);
+      } catch (e) {
+        crawlMsg.textContent = String(e);
+      }
+    });
+
+    // Auto-load quick settings on first open
+    loadQuick().catch(() => {});
+
+    async function refreshRuntime() {
+      const env = await api('/api/admin/env', { method: 'GET' });
+      document.getElementById('envDump').textContent = JSON.stringify(env.env || {}, null, 2);
+
+      const snippet = await api('/api/admin/env-snippet', { method: 'GET' });
+      document.getElementById('envSnippet').textContent = snippet.snippet || '';
+
+      const effective = await api('/api/admin/effective-config', { method: 'GET' });
+      document.getElementById('effectiveDump').textContent = JSON.stringify(effective.effective || {}, null, 2);
+    }
+
+    document.getElementById('refreshRuntime').addEventListener('click', () => {
+      refreshRuntime().catch(() => {});
+    });
+
+    document.getElementById('copyEnv').addEventListener('click', async () => {
+      const msg = document.getElementById('envCopyMsg');
+      try {
+        const snippet = document.getElementById('envSnippet').textContent || '';
+        await navigator.clipboard.writeText(snippet);
+        msg.textContent = 'Copied.';
+      } catch (e) {
+        msg.textContent = 'Copy failed: ' + String(e);
+      }
+    });
+
+    refreshRuntime().catch(() => {});
+  </script>
+{% endblock %}

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.pytest_cache/
+.mypy_cache/
+
+# Virtualenvs
+.venv/
+venv/
+ENV/
+
+# OS / Editors
+.DS_Store
+.idea/
+.vscode/
+
+# Local outputs / data
+output/
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups created by Manage UI
+*.bak.*
+
+# Env files (keep templates like docker/.env.example if needed)
+.env
+.env.*

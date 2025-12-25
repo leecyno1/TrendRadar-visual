@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ title or "TrendRadar" }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root { color-scheme: dark; }
+      body { background: #0b1020; }
+      .glass { background: rgba(255,255,255,0.06); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.10); }
+      .muted { color: rgba(255,255,255,0.72); }
+      .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+      .btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
+      .btn:hover { background: rgba(255,255,255,0.12); }
+      .input { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.12); }
+      a { color: rgba(140, 180, 255, 0.95); }
+    </style>
+  </head>
+  <body class="text-white min-h-screen">
+    <div class="fixed inset-0 -z-10">
+      <div class="absolute inset-0 bg-gradient-to-b from-indigo-500/10 via-transparent to-fuchsia-500/10"></div>
+      <div class="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-indigo-500/20 blur-3xl"></div>
+      <div class="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-fuchsia-500/15 blur-3xl"></div>
+    </div>
+
+    <header class="sticky top-0 z-20 border-b border-white/10 bg-[#0b1020]/75 backdrop-blur">
+      <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+        <a href="/" class="font-semibold tracking-wide">TrendRadar</a>
+        <nav class="flex items-center gap-2 text-sm">
+          <a class="btn rounded-lg px-3 py-1.5" href="/reports">Reports</a>
+          <a class="btn rounded-lg px-3 py-1.5" href="/browse">Browse</a>
+          <a class="btn rounded-lg px-3 py-1.5" href="/manage">Manage</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-10">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="mx-auto max-w-6xl px-4 pb-10 muted text-xs">
+      <div class="border-t border-white/10 pt-6 flex items-center justify-between">
+        <span>TrendRadar Dashboard</span>
+        <a class="muted hover:text-white" href="/api/health">/api/health</a>
+      </div>
+    </footer>
+  </body>
+</html>
+

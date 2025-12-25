@@ -72,9 +72,17 @@ case "${RUN_MODE:-cron}" in
     fi
 
     # 启动 Web 服务器（如果配置了）
-    if [ "${ENABLE_WEBSERVER:-false}" = "true" ]; then
+    ENABLE_WEBSERVER_EFFECTIVE="${ENABLE_WEBSERVER:-}"
+    if [ -z "$ENABLE_WEBSERVER_EFFECTIVE" ] && [ -n "${PORT:-}" ]; then
+        ENABLE_WEBSERVER_EFFECTIVE="true"
+    fi
+    ENABLE_WEBSERVER_EFFECTIVE="${ENABLE_WEBSERVER_EFFECTIVE:-false}"
+
+    if [ "$ENABLE_WEBSERVER_EFFECTIVE" = "true" ]; then
         echo "🌐 启动 Web 服务器..."
         /usr/local/bin/python manage.py start_webserver
+    else
+        echo "ℹ️ 未启用 Web 服务器 (ENABLE_WEBSERVER=${ENABLE_WEBSERVER:-<unset>}, PORT=${PORT:-<unset>})"
     fi
 
     echo "⏰ 启动supercronic: ${CRON_SCHEDULE:-*/30 * * * *}"

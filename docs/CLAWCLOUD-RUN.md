@@ -4,7 +4,11 @@
 
 > 本项目容器内部包含定时器（supercronic），不依赖平台额外的 Cron 产品。
 
-## 1) 通过 Git 仓库构建（推荐：让 Claw 直接拉取）
+## 1) 获取镜像（两种方式）
+
+你可以让 Claw 自己构建，或直接拉取公开镜像（二者选其一）。
+
+### 1.1 通过 Git 仓库构建（推荐：让 Claw 直接构建）
 
 如果 ClawCloud Run 支持 “From Git / Build from Repository / Dockerfile build”，优先用这种方式：你只需要把代码推到 GitHub，然后在 Claw 选择仓库 + Dockerfile 即可自动构建镜像。
 
@@ -17,18 +21,16 @@
 
 随后按本文的 “Persistent Storage” 和 “Environment Variables” 配置即可运行。
 
-> 如果你的 ClawCloud Run 不支持从 Git 构建，请跳到下一节 “先构建并推送镜像”。
+### 1.2 直接使用 GHCR 镜像（无需 Claw 构建）
 
-## 2) 直接使用 GHCR 镜像（无需 Claw 构建）
+如果你更希望 Claw 直接拉取公开镜像，本项目已提供 GHCR 构建工作流（见 `.github/workflows/ghcr.yml`）。公开镜像地址如下（Image Type 选 `Public`）：
 
-如果你更希望 Claw 直接拉取公开镜像，本项目已提供 GHCR 构建工作流（见 `.github/workflows/ghcr.yml`）。镜像地址如下：
-
-- 主服务（抓取 + Dashboard）：`ghcr.io/leecyno1/trendradar-visual:latest`
+- 主服务（抓取 + Dashboard）：`ghcr.io/leecyno1/trendradar-visual:latest`（推荐）
 - MCP 服务（可选）：`ghcr.io/leecyno1/trendradar-visual-mcp:latest`
 
 > 注意：首次构建后需要在 GitHub 的 “Packages” 页面把镜像可见性设为 Public（否则 Claw 拉取会 401）。
 
-## 3) 先构建并推送镜像（兼容方案）
+### 1.3 先构建并推送镜像（兼容方案：Docker Hub / 私有镜像仓库）
 
 ClawCloud Run “Create App” 需要一个可拉取的镜像地址（Public/Private Registry 均可）。下面给出 Docker Hub 的例子：
 
@@ -52,7 +54,9 @@ ClawCloud 文档里“从 Docker 迁移”的映射关系非常直接：`-p` →
 
 - **Application Name**：`trendradar`
 - **Image Type**：`Public`
-- **Image Name**：`<你的DockerHub用户名>/trendradar-dashboard:latest`
+- **Image Name**（二选一）：
+  - GHCR：`ghcr.io/leecyno1/trendradar-visual:latest`
+  - Docker Hub：`<你的DockerHub用户名>/trendradar-dashboard:latest`
 - **Usage Type**：`Fixed`
 - **Replicas**：`1`（SQLite + 本地存储场景不建议多副本）
 - **CPU/Memory**：按需求（建议至少 0.5 Core / 512MB 起）
@@ -61,7 +65,7 @@ ClawCloud 文档里“从 Docker 迁移”的映射关系非常直接：`-p` →
 
 - **Container Port**：`8080`
 
-> 如果你的平台强制用 `PORT` 环境变量，项目也支持：容器会优先读取 `PORT`（见 `docker/manage.py`）。
+> 如果平台自动注入 `PORT`，请保证它和 Container Port 一致；必要时直接在环境变量里加一条：`PORT=8080`。
 
 ### 2.3 Persistent Storage（关键）
 
@@ -80,8 +84,8 @@ ClawCloud 文档里“从 Docker 迁移”的映射关系非常直接：`-p` →
 在 ClawCloud Run 的 “Advanced Configuration → Environment Variables” 填入：
 
 - `TZ=Asia/Shanghai`
-- `ENABLE_WEBSERVER=true`（开启 Dashboard）
-- `WEBSERVER_PORT=8080`（或不填，默认 8080）
+- `ENABLE_WEBSERVER=true`（开启 Dashboard；若平台注入了 `PORT` 且你没填此项，也会默认自动开启）
+- `PORT=8080`（可选但推荐：显式与 Container Port 对齐）
 - `RUN_MODE=cron`
 - `CRON_SCHEDULE=*/30 * * * *`（示例：每 30 分钟抓取一次）
 - `IMMEDIATE_RUN=true`（启动时先抓一次）
@@ -104,6 +108,7 @@ ClawCloud 文档里“从 Docker 迁移”的映射关系非常直接：`-p` →
 - 数据浏览：`/browse`
 - 管理页：`/manage`
   - 如设置了 `ADMIN_TOKEN`，在页面中填入 token（会存到浏览器 localStorage），后续保存配置/触发抓取会自动带上请求头 `X-Admin-Token`。
+- 健康检查：`/api/health`
 
 ## 4) （可选）部署 MCP 服务（AI 分析）
 
@@ -121,6 +126,15 @@ ClawCloud 文档里“从 Docker 迁移”的映射关系非常直接：`-p` →
 > 如果你无法在两个 App 之间共享同一份持久化存储，建议改用远程存储（S3/R2/OSS/COS）+ `PULL_ENABLED=true` 让 MCP 服务拉取数据。
 
 ## 5) 常见问题
+
+### 5.1 报错：upstream connect error... delayed connect error: 111
+
+这表示网关连不上容器端口（连接被拒绝），通常是 Web 服务没起来或监听端口不一致：
+
+- 检查 App 的 **Container Port** 是否为 `8080`
+- 检查是否启用 Web：`ENABLE_WEBSERVER=true`（或确认平台注入了 `PORT`，项目会默认自动开启）
+- 确保 `PORT`（若存在）与 Container Port 一致（推荐直接配置 `PORT=8080`）
+- 看容器日志是否出现 `🌐 启动 Web 服务器 (端口: ...)`；并访问 `GET /api/health`
 
 - **为什么不建议多副本？**
   - 本地 SQLite + 单挂载目录模式本质是“单机状态”，多副本会带来数据一致性/锁问题。

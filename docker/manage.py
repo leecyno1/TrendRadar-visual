@@ -9,11 +9,15 @@ import sys
 import subprocess
 import time
 import signal
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 # Web 服务器配置（Dashboard / 静态报告）
 # - ClawCloud/Cloud Run 类平台常用 PORT 变量
-WEBSERVER_PORT = int(os.environ.get("PORT", os.environ.get("WEBSERVER_PORT", "8080")))
+_PORT_ENV = os.environ.get("PORT")
+_WEBSERVER_PORT_ENV = os.environ.get("WEBSERVER_PORT")
+WEBSERVER_PORT = int(_PORT_ENV or _WEBSERVER_PORT_ENV or "8080")
 WEBSERVER_PID_FILE = "/tmp/webserver.pid"
 
 
@@ -425,6 +429,11 @@ def restart_supercronic():
 
 def start_webserver():
     """启动 Web 服务器（TrendRadar Dashboard）"""
+    if _PORT_ENV and _WEBSERVER_PORT_ENV and str(_PORT_ENV).strip() != str(_WEBSERVER_PORT_ENV).strip():
+        print(
+            f"⚠️ 检测到 PORT({_PORT_ENV}) 与 WEBSERVER_PORT({_WEBSERVER_PORT_ENV}) 不一致，"
+            f"当前将使用 PORT={WEBSERVER_PORT} 进行监听。"
+        )
     print(f"🌐 启动 Web 服务器 (端口: {WEBSERVER_PORT})...")
     print("  🧭 Dashboard: /  /reports  /browse  /manage")
     print("  📄 报告直链: /output/<path>  (仅允许常见静态文件类型)")
@@ -463,18 +472,31 @@ def start_webserver():
                 "--port",
                 str(WEBSERVER_PORT),
                 "--proxy-headers",
+                "--forwarded-allow-ips",
+                "*",
             ],
             cwd="/app",
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
 
-        # 等待一下确保服务器启动
-        time.sleep(1)
+        # 等待一下确保服务器启动（并做健康检查，便于云端排错）
+        health_url = f"http://127.0.0.1:{WEBSERVER_PORT}/api/health"
+        deadline = time.time() + 8
+        last_err = None
+        while time.time() < deadline:
+            if process.poll() is not None:
+                break
+            try:
+                with urllib.request.urlopen(health_url, timeout=1.5) as resp:
+                    if 200 <= resp.status < 300:
+                        last_err = None
+                        break
+            except Exception as e:
+                last_err = e
+                time.sleep(0.3)
 
         # 检查进程是否还在运行
-        if process.poll() is None:
+        if process.poll() is None and last_err is None:
             # 保存 PID
             with open(WEBSERVER_PID_FILE, 'w') as f:
                 f.write(str(process.pid))
@@ -484,11 +506,16 @@ def start_webserver():
             print(f"  🧭 Dashboard: http://localhost:{WEBSERVER_PORT}/")
             print(f"  📄 报告页: http://localhost:{WEBSERVER_PORT}/reports")
             print(f"  📄 原始报告直链: http://localhost:{WEBSERVER_PORT}/output/index.html")
+            print(f"  🩺 健康检查: {health_url}")
             print("  💡 停止服务: python manage.py stop_webserver")
         else:
             print(f"  ❌ Web 服务器启动失败")
+            if last_err is not None:
+                print(f"  ❌ 健康检查失败: {last_err}")
+            raise SystemExit(1)
     except Exception as e:
         print(f"  ❌ 启动失败: {e}")
+        raise SystemExit(1)
 
 
 def stop_webserver():

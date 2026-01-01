@@ -82,8 +82,8 @@ report:
   # 兜底：防漏捕（当新闻不匹配任何频率词时，也可强制收录全量合并后的 Top N）
   # - always_include_top_n: 0=关闭，>0=启用（建议 3~10）
   # - always_include_only_unmatched: true=只收录“未命中任何词组”的新闻；false=直接收录全站 TopN（可能与词组重复）
-  always_include_top_n: 5
-  always_include_group_name: "综合 Top5"
+  always_include_top_n: 10
+  always_include_group_name: "综合 Top10"
   always_include_only_unmatched: true
 
 notification:

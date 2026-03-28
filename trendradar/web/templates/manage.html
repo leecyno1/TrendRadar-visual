@@ -496,12 +496,12 @@
 
       document.getElementById('q_timezone').value = get(cfg, 'app.timezone', 'Asia/Shanghai');
       document.getElementById('q_show_version_update').checked = !!get(cfg, 'app.show_version_update', true);
-      document.getElementById('q_version_check_url').value = get(cfg, 'app.version_check_url', '');
+      document.getElementById('q_version_check_url').value = get(cfg, 'advanced.version_check_url', '');
 
-      document.getElementById('q_enable_crawler').checked = !!get(cfg, 'crawler.enable_crawler', true);
-      document.getElementById('q_request_interval').value = get(cfg, 'crawler.request_interval', 1000);
-      document.getElementById('q_use_proxy').checked = !!get(cfg, 'crawler.use_proxy', false);
-      document.getElementById('q_default_proxy').value = get(cfg, 'crawler.default_proxy', '');
+      document.getElementById('q_enable_crawler').checked = !!get(cfg, 'platforms.enabled', true);
+      document.getElementById('q_request_interval').value = get(cfg, 'advanced.crawler.request_interval', 100);
+      document.getElementById('q_use_proxy').checked = !!get(cfg, 'advanced.crawler.use_proxy', false);
+      document.getElementById('q_default_proxy').value = get(cfg, 'advanced.crawler.default_proxy', '');
 
       document.getElementById('q_report_mode').value = get(cfg, 'report.mode', 'daily');
       document.getElementById('q_rank_threshold').value = get(cfg, 'report.rank_threshold', 5);
@@ -533,40 +533,40 @@
       document.getElementById('q_push_window_end').value = get(cfg, 'notification.push_window.time_range.end', '22:00');
       document.getElementById('q_push_window_once').checked = !!get(cfg, 'notification.push_window.once_per_day', true);
 
-      document.getElementById('q_enable_notification').checked = !!get(cfg, 'notification.enable_notification', true);
-      document.getElementById('q_message_batch_size').value = get(cfg, 'notification.message_batch_size', 4000);
-      document.getElementById('q_dingtalk_batch_size').value = get(cfg, 'notification.dingtalk_batch_size', 20000);
-      document.getElementById('q_feishu_batch_size').value = get(cfg, 'notification.feishu_batch_size', 30000);
-      document.getElementById('q_bark_batch_size').value = get(cfg, 'notification.bark_batch_size', 4000);
-      document.getElementById('q_slack_batch_size').value = get(cfg, 'notification.slack_batch_size', 4000);
-      document.getElementById('q_batch_send_interval').value = get(cfg, 'notification.batch_send_interval', 3);
-      document.getElementById('q_feishu_message_separator').value = get(cfg, 'notification.feishu_message_separator', '━━━━━━━━━━━━━━━━━━━');
-      document.getElementById('q_max_accounts_per_channel').value = get(cfg, 'notification.max_accounts_per_channel', 3);
-      const wh = get(cfg, 'notification.webhooks', {});
-      document.getElementById('q_feishu_url').value = get(wh, 'feishu_url', '');
-      document.getElementById('q_dingtalk_url').value = get(wh, 'dingtalk_url', '');
-      document.getElementById('q_wework_url').value = get(wh, 'wework_url', '');
-      document.getElementById('q_wework_msg_type').value = get(wh, 'wework_msg_type', 'markdown');
-      document.getElementById('q_telegram_bot_token').value = get(wh, 'telegram_bot_token', '');
-      document.getElementById('q_telegram_chat_id').value = get(wh, 'telegram_chat_id', '');
-      document.getElementById('q_email_to').value = get(wh, 'email_to', '');
-      document.getElementById('q_email_from').value = get(wh, 'email_from', '');
-      document.getElementById('q_email_password').value = get(wh, 'email_password', '');
-      document.getElementById('q_email_smtp_server').value = get(wh, 'email_smtp_server', '');
-      document.getElementById('q_email_smtp_port').value = get(wh, 'email_smtp_port', '');
-      document.getElementById('q_ntfy_server_url').value = get(wh, 'ntfy_server_url', 'https://ntfy.sh');
-      document.getElementById('q_ntfy_topic').value = get(wh, 'ntfy_topic', '');
-      document.getElementById('q_ntfy_token').value = get(wh, 'ntfy_token', '');
-      document.getElementById('q_bark_url').value = get(wh, 'bark_url', '');
-      document.getElementById('q_slack_webhook_url').value = get(wh, 'slack_webhook_url', '');
+      document.getElementById('q_enable_notification').checked = !!get(cfg, 'notification.enabled', true);
+      document.getElementById('q_message_batch_size').value = get(cfg, 'advanced.batch_size.default', 4000);
+      document.getElementById('q_dingtalk_batch_size').value = get(cfg, 'advanced.batch_size.dingtalk', 20000);
+      document.getElementById('q_feishu_batch_size').value = get(cfg, 'advanced.batch_size.feishu', 30000);
+      document.getElementById('q_bark_batch_size').value = get(cfg, 'advanced.batch_size.bark', 4000);
+      document.getElementById('q_slack_batch_size').value = get(cfg, 'advanced.batch_size.slack', 4000);
+      document.getElementById('q_batch_send_interval').value = get(cfg, 'advanced.batch_send_interval', 3);
+      document.getElementById('q_feishu_message_separator').value = get(cfg, 'advanced.feishu_message_separator', '━━━━━━━━━━━━━━━━━━━');
+      document.getElementById('q_max_accounts_per_channel').value = get(cfg, 'advanced.max_accounts_per_channel', 3);
+      const channels = get(cfg, 'notification.channels', {});
+      document.getElementById('q_feishu_url').value = get(channels, 'feishu.webhook_url', '');
+      document.getElementById('q_dingtalk_url').value = get(channels, 'dingtalk.webhook_url', '');
+      document.getElementById('q_wework_url').value = get(channels, 'wework.webhook_url', '');
+      document.getElementById('q_wework_msg_type').value = get(channels, 'wework.msg_type', 'markdown');
+      document.getElementById('q_telegram_bot_token').value = get(channels, 'telegram.bot_token', '');
+      document.getElementById('q_telegram_chat_id').value = get(channels, 'telegram.chat_id', '');
+      document.getElementById('q_email_to').value = get(channels, 'email.to', '');
+      document.getElementById('q_email_from').value = get(channels, 'email.from', '');
+      document.getElementById('q_email_password').value = get(channels, 'email.password', '');
+      document.getElementById('q_email_smtp_server').value = get(channels, 'email.smtp_server', '');
+      document.getElementById('q_email_smtp_port').value = get(channels, 'email.smtp_port', '');
+      document.getElementById('q_ntfy_server_url').value = get(channels, 'ntfy.server_url', 'https://ntfy.sh');
+      document.getElementById('q_ntfy_topic').value = get(channels, 'ntfy.topic', '');
+      document.getElementById('q_ntfy_token').value = get(channels, 'ntfy.token', '');
+      document.getElementById('q_bark_url').value = get(channels, 'bark.url', '');
+      document.getElementById('q_slack_webhook_url').value = get(channels, 'slack.webhook_url', '');
 
-      document.getElementById('q_rank_weight').value = get(cfg, 'weight.rank_weight', 0.6);
-      document.getElementById('q_frequency_weight').value = get(cfg, 'weight.frequency_weight', 0.3);
-      document.getElementById('q_hotness_weight').value = get(cfg, 'weight.hotness_weight', 0.1);
+      document.getElementById('q_rank_weight').value = get(cfg, 'advanced.weight.rank', 0.6);
+      document.getElementById('q_frequency_weight').value = get(cfg, 'advanced.weight.frequency', 0.3);
+      document.getElementById('q_hotness_weight').value = get(cfg, 'advanced.weight.hotness', 0.1);
 
       const platformWrap = document.getElementById('platformRows');
       platformWrap.innerHTML = '';
-      const platforms = get(cfg, 'platforms', []);
+      const platforms = get(cfg, 'platforms.sources', []);
       if (Array.isArray(platforms)) {
         for (const p of platforms) {
           platformWrap.appendChild(platformRow(p.id || '', p.name || ''));
@@ -595,15 +595,12 @@
       const keepSecrets = document.getElementById('q_keep_secrets').checked;
       const patch = {
         app: {
-          version_check_url: document.getElementById('q_version_check_url').value.trim(),
           timezone: document.getElementById('q_timezone').value.trim() || 'Asia/Shanghai',
           show_version_update: document.getElementById('q_show_version_update').checked,
         },
-        crawler: {
-          enable_crawler: document.getElementById('q_enable_crawler').checked,
-          request_interval: Number(document.getElementById('q_request_interval').value || 1000),
-          use_proxy: document.getElementById('q_use_proxy').checked,
-          default_proxy: document.getElementById('q_default_proxy').value.trim(),
+        platforms: {
+          enabled: document.getElementById('q_enable_crawler').checked,
+          sources: collectPlatforms(),
         },
         report: {
           mode: document.getElementById('q_report_mode').value,
@@ -641,15 +638,7 @@
           },
         },
         notification: {
-          enable_notification: document.getElementById('q_enable_notification').checked,
-          message_batch_size: Number(document.getElementById('q_message_batch_size').value || 4000),
-          dingtalk_batch_size: Number(document.getElementById('q_dingtalk_batch_size').value || 20000),
-          feishu_batch_size: Number(document.getElementById('q_feishu_batch_size').value || 30000),
-          bark_batch_size: Number(document.getElementById('q_bark_batch_size').value || 4000),
-          slack_batch_size: Number(document.getElementById('q_slack_batch_size').value || 4000),
-          batch_send_interval: Number(document.getElementById('q_batch_send_interval').value || 3),
-          feishu_message_separator: document.getElementById('q_feishu_message_separator').value,
-          max_accounts_per_channel: Number(document.getElementById('q_max_accounts_per_channel').value || 3),
+          enabled: document.getElementById('q_enable_notification').checked,
           push_window: {
             enabled: document.getElementById('q_push_window_enabled').checked,
             time_range: {
@@ -658,44 +647,77 @@
             },
             once_per_day: document.getElementById('q_push_window_once').checked,
           },
-          webhooks: {
-            feishu_url: document.getElementById('q_feishu_url').value.trim(),
-            dingtalk_url: document.getElementById('q_dingtalk_url').value.trim(),
-            wework_url: document.getElementById('q_wework_url').value.trim(),
-            wework_msg_type: document.getElementById('q_wework_msg_type').value,
-            telegram_bot_token: document.getElementById('q_telegram_bot_token').value.trim(),
-            telegram_chat_id: document.getElementById('q_telegram_chat_id').value.trim(),
-            email_to: document.getElementById('q_email_to').value.trim(),
-            email_from: document.getElementById('q_email_from').value.trim(),
-            email_password: document.getElementById('q_email_password').value.trim(),
-            email_smtp_server: document.getElementById('q_email_smtp_server').value.trim(),
-            email_smtp_port: document.getElementById('q_email_smtp_port').value.trim(),
-            ntfy_server_url: document.getElementById('q_ntfy_server_url').value.trim() || 'https://ntfy.sh',
-            ntfy_topic: document.getElementById('q_ntfy_topic').value.trim(),
-            ntfy_token: document.getElementById('q_ntfy_token').value.trim(),
-            bark_url: document.getElementById('q_bark_url').value.trim(),
-            slack_webhook_url: document.getElementById('q_slack_webhook_url').value.trim(),
+          channels: {
+            feishu: {
+              webhook_url: document.getElementById('q_feishu_url').value.trim(),
+            },
+            dingtalk: {
+              webhook_url: document.getElementById('q_dingtalk_url').value.trim(),
+            },
+            wework: {
+              webhook_url: document.getElementById('q_wework_url').value.trim(),
+              msg_type: document.getElementById('q_wework_msg_type').value,
+            },
+            telegram: {
+              bot_token: document.getElementById('q_telegram_bot_token').value.trim(),
+              chat_id: document.getElementById('q_telegram_chat_id').value.trim(),
+            },
+            email: {
+              to: document.getElementById('q_email_to').value.trim(),
+              from: document.getElementById('q_email_from').value.trim(),
+              password: document.getElementById('q_email_password').value.trim(),
+              smtp_server: document.getElementById('q_email_smtp_server').value.trim(),
+              smtp_port: document.getElementById('q_email_smtp_port').value.trim(),
+            },
+            ntfy: {
+              server_url: document.getElementById('q_ntfy_server_url').value.trim() || 'https://ntfy.sh',
+              topic: document.getElementById('q_ntfy_topic').value.trim(),
+              token: document.getElementById('q_ntfy_token').value.trim(),
+            },
+            bark: {
+              url: document.getElementById('q_bark_url').value.trim(),
+            },
+            slack: {
+              webhook_url: document.getElementById('q_slack_webhook_url').value.trim(),
+            },
           },
         },
-        weight: {
-          rank_weight: Number(document.getElementById('q_rank_weight').value || 0),
-          frequency_weight: Number(document.getElementById('q_frequency_weight').value || 0),
-          hotness_weight: Number(document.getElementById('q_hotness_weight').value || 0),
+        advanced: {
+          version_check_url: document.getElementById('q_version_check_url').value.trim(),
+          crawler: {
+            request_interval: Number(document.getElementById('q_request_interval').value || 100),
+            use_proxy: document.getElementById('q_use_proxy').checked,
+            default_proxy: document.getElementById('q_default_proxy').value.trim(),
+          },
+          batch_size: {
+            default: Number(document.getElementById('q_message_batch_size').value || 4000),
+            dingtalk: Number(document.getElementById('q_dingtalk_batch_size').value || 20000),
+            feishu: Number(document.getElementById('q_feishu_batch_size').value || 30000),
+            bark: Number(document.getElementById('q_bark_batch_size').value || 4000),
+            slack: Number(document.getElementById('q_slack_batch_size').value || 4000),
+          },
+          batch_send_interval: Number(document.getElementById('q_batch_send_interval').value || 3),
+          feishu_message_separator: document.getElementById('q_feishu_message_separator').value,
+          max_accounts_per_channel: Number(document.getElementById('q_max_accounts_per_channel').value || 3),
+          weight: {
+            rank: Number(document.getElementById('q_rank_weight').value || 0),
+            frequency: Number(document.getElementById('q_frequency_weight').value || 0),
+            hotness: Number(document.getElementById('q_hotness_weight').value || 0),
+          },
         },
-        platforms: collectPlatforms(),
       };
 
       if (keepSecrets) {
         const secretPaths = [
           ['storage','remote','secret_access_key'],
-          ['notification','webhooks','email_password'],
-          ['notification','webhooks','telegram_bot_token'],
-          ['notification','webhooks','ntfy_token'],
-          ['notification','webhooks','feishu_url'],
-          ['notification','webhooks','dingtalk_url'],
-          ['notification','webhooks','wework_url'],
-          ['notification','webhooks','slack_webhook_url'],
-          ['notification','webhooks','bark_url'],
+          ['notification','channels','email','password'],
+          ['notification','channels','telegram','bot_token'],
+          ['notification','channels','ntfy','token'],
+          ['notification','channels','feishu','webhook_url'],
+          ['notification','channels','dingtalk','webhook_url'],
+          ['notification','channels','wework','webhook_url'],
+          ['notification','channels','slack','webhook_url'],
+          ['notification','channels','bark','url'],
         ];
         for (const path of secretPaths) {
           let cur = patch;

@@ -159,10 +159,15 @@ def _require_admin(request: Request) -> None:
 def _db_path_for_date(date_str: str) -> Path:
     if not DATE_DIR_RE.match(date_str):
         raise HTTPException(status_code=400, detail="Invalid date format, expected YYYY-MM-DD")
-    db_path = get_output_dir() / date_str / "news.db"
-    if not db_path.exists():
-        raise HTTPException(status_code=404, detail=f"news.db not found for date {date_str}")
-    return db_path
+    output_dir = get_output_dir()
+    candidates = [
+        output_dir / "news" / f"{date_str}.db",  # v6 扁平化结构
+        output_dir / date_str / "news.db",       # 兼容旧结构
+    ]
+    for db_path in candidates:
+        if db_path.exists():
+            return db_path
+    raise HTTPException(status_code=404, detail=f"news.db not found for date {date_str}")
 
 
 def _connect_db(db_path: Path) -> sqlite3.Connection:
@@ -192,7 +197,27 @@ def _scan_report_files() -> List[Dict[str, Any]]:
             }
         )
 
-    # 收集各日期下 html/*.html
+    # 收集新结构 output/html/{date}/*.html
+    html_root = output_dir / "html"
+    if html_root.exists():
+        for date_dir in sorted(html_root.iterdir(), reverse=True):
+            if not date_dir.is_dir() or not DATE_DIR_RE.match(date_dir.name):
+                continue
+            for html_file in sorted(date_dir.glob("*.html")):
+                stat = html_file.stat()
+                relpath = html_file.relative_to(output_dir).as_posix()
+                items.append(
+                    {
+                        "id": relpath,
+                        "label": f"{date_dir.name} / {html_file.name}",
+                        "relpath": relpath,
+                        "date": date_dir.name,
+                        "mtime": stat.st_mtime,
+                        "size": stat.st_size,
+                    }
+                )
+
+    # 兼容旧结构 output/{date}/html/*.html
     for date_dir in sorted(output_dir.iterdir(), reverse=True):
         if not date_dir.is_dir():
             continue
@@ -219,6 +244,30 @@ def _scan_report_files() -> List[Dict[str, Any]]:
     return items
 
 
+def _discover_dates() -> List[str]:
+    """同时兼容新旧输出结构，提取可浏览日期列表。"""
+    output_dir = get_output_dir()
+    if not output_dir.exists():
+        return []
+
+    dates = set()
+
+    # v6: output/news/YYYY-MM-DD.db
+    news_dir = output_dir / "news"
+    if news_dir.exists():
+        for db_file in news_dir.glob("*.db"):
+            stem = db_file.stem
+            if DATE_DIR_RE.match(stem):
+                dates.add(stem)
+
+    # 旧版: output/YYYY-MM-DD/news.db
+    for p in output_dir.iterdir():
+        if p.is_dir() and DATE_DIR_RE.match(p.name) and (p / "news.db").exists():
+            dates.add(p.name)
+
+    return sorted(dates, reverse=True)
+
+
 def _read_text_file(path: Path) -> str:
     if not path.exists():
         return ""
@@ -234,7 +283,7 @@ def _write_text_file_with_backup(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-app = FastAPI(title="Dr.Lemon-NewsRadar", version="0.1.0")
+app = FastAPI(title="大圣之怒新闻舆情搜索", version="0.1.0")
 
 STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
@@ -261,7 +310,7 @@ def home(request: Request) -> Any:
         request,
         "home.html",
         {
-            "title": "Dr.Lemon-NewsRadar",
+            "title": "大圣之怒新闻舆情搜索",
         },
     )
 
@@ -329,15 +378,7 @@ def latest_report() -> Dict[str, Any]:
 
 @app.get("/api/dates")
 def list_dates() -> List[str]:
-    output_dir = get_output_dir()
-    if not output_dir.exists():
-        return []
-    dates = []
-    for p in output_dir.iterdir():
-        if p.is_dir() and DATE_DIR_RE.match(p.name):
-            dates.append(p.name)
-    dates.sort(reverse=True)
-    return dates
+    return _discover_dates()
 
 
 @app.get("/api/platforms")

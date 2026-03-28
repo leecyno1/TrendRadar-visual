@@ -3,71 +3,142 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{{ title or "Dr.Lemon-NewsRadar" }}</title>
-    <meta name="description" content="Dr.Lemon-NewsRadar：热点新闻聚合、分析与可视化报告（Reports/Browse/Manage）。" />
-    <link rel="icon" href="/static/dr-lemon-logo.svg" type="image/svg+xml" />
+    <title>{{ title or "大圣之怒新闻舆情搜索" }}</title>
+    <meta name="description" content="大圣之怒新闻舆情搜索：热点新闻聚合、分析与可视化报告（Reports/Browse/Manage）。" />
+    <link rel="icon" href="/static/dasheng-zhinu-logo.png" type="image/png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       :root {
-        --bg: #0b1020;
-        --bg2: #0a0f1a;
-        --text: rgba(255,255,255,0.95);
-        --muted: rgba(255,255,255,0.70);
-        --card: rgba(255,255,255,0.06);
-        --card2: rgba(255,255,255,0.05);
-        --border: rgba(255,255,255,0.12);
-        --border2: rgba(255,255,255,0.10);
-        --link: rgba(250, 204, 21, 0.95);
-        --accent: #facc15;
-        --accent2: #22c55e;
-        color-scheme: dark;
-      }
-
-      html.light {
-        --bg: #f8fafc;
-        --bg2: #eef2f7;
+        --bg: #ffffff;
+        --bg2: #f4f7ff;
         --text: rgba(15, 23, 42, 0.92);
         --muted: rgba(15, 23, 42, 0.60);
         --card: rgba(255,255,255,0.92);
-        --card2: rgba(255,255,255,0.88);
+        --card2: rgba(255,255,255,0.96);
         --border: rgba(15, 23, 42, 0.12);
         --border2: rgba(15, 23, 42, 0.10);
-        --link: rgba(180, 83, 9, 0.95);
+        --link: #b3221d;
+        --btn-bg: rgba(15,23,42,0.04);
+        --btn-bg-hover: rgba(15,23,42,0.08);
+        --input-bg: rgba(255,255,255,0.92);
+        --header-bg: color-mix(in srgb, #ffffff 84%, transparent);
+        --brand-red: #a61d24;
+        --brand-blue: #1f4da3;
+        --bg-glow-red: 0;
+        --bg-glow-blue: 0;
+        --accent: #ff4d36;
+        --accent2: #ffce72;
         color-scheme: light;
       }
 
-      body { background: var(--bg); color: var(--text); }
+      html.light {
+        --bg: #ffffff;
+        --bg2: #f4f7ff;
+        --text: rgba(15, 23, 42, 0.92);
+        --muted: rgba(15, 23, 42, 0.60);
+        --card: rgba(255,255,255,0.92);
+        --card2: rgba(255,255,255,0.96);
+        --border: rgba(15, 23, 42, 0.12);
+        --border2: rgba(15, 23, 42, 0.10);
+        --link: #b3221d;
+        --btn-bg: rgba(15,23,42,0.04);
+        --btn-bg-hover: rgba(15,23,42,0.08);
+        --input-bg: rgba(255,255,255,0.92);
+        --header-bg: color-mix(in srgb, #ffffff 84%, transparent);
+        --brand-red: #a61d24;
+        --brand-blue: #1f4da3;
+        --bg-glow-red: 0;
+        --bg-glow-blue: 0;
+        color-scheme: light;
+      }
+
+      html.dark {
+        --bg: #0b1220;
+        --bg2: #111b30;
+        --text: rgba(236, 244, 255, 0.96);
+        --muted: rgba(191, 210, 240, 0.72);
+        --card: rgba(17, 25, 40, 0.76);
+        --card2: rgba(17, 28, 47, 0.84);
+        --border: rgba(148, 163, 184, 0.32);
+        --border2: rgba(148, 163, 184, 0.24);
+        --link: #93c5fd;
+        --btn-bg: rgba(148,163,184,0.14);
+        --btn-bg-hover: rgba(148,163,184,0.22);
+        --input-bg: rgba(15,23,42,0.55);
+        --header-bg: color-mix(in srgb, #0b1220 88%, transparent);
+        --brand-red: #f87171;
+        --brand-blue: #93c5fd;
+        --bg-glow-red: 0.20;
+        --bg-glow-blue: 0.18;
+        color-scheme: dark;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        transition: background-color 0.25s ease, color 0.25s ease;
+      }
+      .theme-bg {
+        background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+      }
+      .bg-glow {
+        position: absolute;
+        border-radius: 9999px;
+        filter: blur(68px);
+        pointer-events: none;
+      }
+      .bg-glow-red {
+        width: 340px;
+        height: 340px;
+        top: -80px;
+        left: 8%;
+        background: rgba(185, 28, 28, var(--bg-glow-red));
+      }
+      .bg-glow-blue {
+        width: 360px;
+        height: 360px;
+        right: 6%;
+        bottom: -100px;
+        background: rgba(29, 78, 216, var(--bg-glow-blue));
+      }
       .glass { background: var(--card); backdrop-filter: blur(14px); border: 1px solid var(--border2); }
       .muted { color: var(--muted); }
       .card { background: var(--card2); border: 1px solid var(--border2); }
-      .btn { background: rgba(255,255,255,0.08); border: 1px solid var(--border); }
-      html.light .btn { background: rgba(15,23,42,0.04); }
-      .btn:hover { background: rgba(255,255,255,0.12); }
-      html.light .btn:hover { background: rgba(15,23,42,0.07); }
-      .input { background: rgba(0,0,0,0.22); border: 1px solid var(--border); }
-      html.light .input { background: rgba(255,255,255,0.72); }
+      .brand-word-1 { color: var(--brand-red); }
+      .brand-word-2 { color: var(--brand-blue); }
+      .btn {
+        background: var(--btn-bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+        transition: background-color 0.2s ease, border-color 0.2s ease;
+      }
+      .btn:hover { background: var(--btn-bg-hover); }
+      .input {
+        background: var(--input-bg);
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
       a { color: var(--link); }
       code { color: var(--muted); }
     </style>
   </head>
   <body class="min-h-screen">
-    <div class="fixed inset-0 -z-10">
-      <div class="absolute inset-0 bg-gradient-to-b from-amber-400/10 via-transparent to-emerald-400/10"></div>
-      <div class="absolute -top-24 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-amber-400/18 blur-3xl"></div>
-      <div class="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-emerald-400/12 blur-3xl"></div>
+    <div class="fixed inset-0 -z-10 theme-bg">
+      <div class="bg-glow bg-glow-red"></div>
+      <div class="bg-glow bg-glow-blue"></div>
     </div>
 
-    <header class="sticky top-0 z-20 border-b border-black/10 dark:border-white/10 backdrop-blur" style="background: color-mix(in srgb, var(--bg) 75%, transparent);">
-      <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
+    <header class="sticky top-0 z-20 border-b backdrop-blur" style="background: var(--header-bg); border-color: var(--border2);">
+      <div class="mx-auto max-w-6xl px-4 py-2 flex items-center justify-between gap-2">
         <a href="/" class="flex items-center gap-2 font-semibold tracking-wide">
-          <img src="/static/dr-lemon-logo.svg" alt="Dr.Lemon-NewsRadar" class="h-6 w-6" />
-          <span>Dr.Lemon-NewsRadar</span>
+          <img src="/static/dasheng-brand-mark.png" alt="大圣之怒" class="h-7 w-auto max-w-[165px] rounded-md object-contain ring-1 ring-white/20" />
+          <span class="whitespace-nowrap brand-word-2 text-sm">新闻舆情搜索</span>
         </a>
-        <nav class="flex items-center gap-2 text-sm">
-          <a class="btn rounded-lg px-3 py-1.5" href="/reports">Reports</a>
-          <a class="btn rounded-lg px-3 py-1.5" href="/browse">Browse</a>
-          <a class="btn rounded-lg px-3 py-1.5" href="/manage">Manage</a>
-          <select id="theme" class="input rounded-lg px-2 py-1.5 text-sm" title="Theme">
+        <nav class="flex items-center gap-1.5 text-[13px]">
+          <a class="btn rounded-lg px-2.5 py-1" href="/reports">Reports</a>
+          <a class="btn rounded-lg px-2.5 py-1" href="/browse">Browse</a>
+          <a class="btn rounded-lg px-2.5 py-1" href="/manage">Manage</a>
+          <select id="theme" class="input rounded-lg px-2 py-1 text-[13px]" title="Theme">
             <option value="system">System</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
@@ -82,7 +153,7 @@
 
     <footer class="mx-auto max-w-6xl px-4 pb-10 muted text-xs">
       <div class="border-t pt-6 flex items-center justify-between" style="border-color: var(--border2);">
-        <span>Dr.Lemon-NewsRadar Dashboard</span>
+        <span>大圣之怒新闻舆情搜索 Dashboard</span>
         <a class="muted hover:opacity-90" href="/api/health">/api/health</a>
       </div>
     </footer>

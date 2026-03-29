@@ -12,8 +12,52 @@
 """
 
 import os
+import re
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Union, Any
+
+
+def _word_matches(word_config: Union[str, Dict[str, Any]], title_lower: str) -> bool:
+    """
+    检查词是否在标题中匹配（兼容字符串与字典配置）
+
+    Args:
+        word_config: 词配置（字符串或字典）
+        title_lower: 小写标题
+
+    Returns:
+        是否匹配
+    """
+    if not isinstance(title_lower, str):
+        title_lower = str(title_lower) if title_lower is not None else ""
+
+    # 向后兼容：纯字符串词项
+    if isinstance(word_config, str):
+        return word_config.lower() in title_lower
+
+    # 字典词项：优先使用预编译正则
+    if isinstance(word_config, dict):
+        pattern = word_config.get("pattern")
+        if pattern is not None:
+            try:
+                return bool(pattern.search(title_lower))
+            except Exception:
+                return False
+
+        word = word_config.get("word")
+        if isinstance(word, str):
+            # 兼容 /regex/ 字面量格式
+            regex_match = re.match(r"^/(.+)/[a-z]*$", word)
+            if regex_match:
+                try:
+                    return bool(
+                        re.search(regex_match.group(1), title_lower, flags=re.IGNORECASE)
+                    )
+                except re.error:
+                    return False
+            return word.lower() in title_lower
+
+    return False
 
 
 def load_frequency_words(

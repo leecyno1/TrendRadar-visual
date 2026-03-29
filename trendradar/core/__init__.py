@@ -24,6 +24,7 @@ from trendradar.core.analyzer import (
     format_time_display,
     count_word_frequency,
 )
+from trendradar.core.scheduler import Scheduler
 
 __all__ = [
     "parse_multi_account_config",
@@ -44,4 +45,5 @@ __all__ = [
     "calculate_news_weight",
     "format_time_display",
     "count_word_frequency",
+    "Scheduler",
 ]
